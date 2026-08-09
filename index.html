@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   Kalix Offset to HexPatch Converter
+  </title>
+  <style>
+   :root{
+    --bg:#050505;
+    --panel:#111111;
+    --panel2:#0b0b0b;
+    --neon:#00FF66;
+    --cyan:#00E5FF;
+    --text:#d8ffe6;
+    --muted:#7a8a80;
+    --danger:#ff3366;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    min-height:100vh;
+  }
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(0,255,102,0.06), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(0,229,255,0.06), transparent 40%),
+      var(--bg);
+  }
+  ::selection{background:var(--neon);color:#000;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:#0a0a0a;}
+  ::-webkit-scrollbar-thumb{background:linear-gradient(var(--neon),var(--cyan));border-radius:10px;}
+
+  header{
+    padding:22px 20px;
+    text-align:center;
+    border-bottom:1px solid rgba(0,255,102,0.25);
+    background:linear-gradient(180deg, rgba(0,255,102,0.05), transparent);
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(8px);
+  }
+  header h1{
+    margin:0;
+    font-size:clamp(20px,4vw,32px);
+    letter-spacing:3px;
+    font-weight:800;
+    color:var(--neon);
+    text-shadow:0 0 8px rgba(0,255,102,0.7), 0 0 22px rgba(0,255,102,0.35);
+  }
+  header .sub{
+    margin-top:6px;
+    font-size:12px;
+    letter-spacing:4px;
+    color:var(--cyan);
+    text-shadow:0 0 6px rgba(0,229,255,0.6);
+    opacity:0.85;
+  }
+
+  .wrap{
+    max-width:1400px;
+    margin:0 auto;
+    padding:20px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  @media(max-width:900px){
+    .grid{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid rgba(0,255,102,0.18);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:0 0 25px rgba(0,255,102,0.06), inset 0 0 40px rgba(0,0,0,0.6);
+    transition:box-shadow .3s ease, border-color .3s ease;
+  }
+  .panel:hover{
+    border-color:rgba(0,255,102,0.4);
+    box-shadow:0 0 35px rgba(0,255,102,0.12), inset 0 0 40px rgba(0,0,0,0.6);
+  }
+  .panel h2{
+    margin:0 0 14px 0;
+    font-size:14px;
+    letter-spacing:2px;
+    color:var(--cyan);
+    text-transform:uppercase;
+    text-shadow:0 0 6px rgba(0,229,255,0.5);
+    display:flex;align-items:center;gap:8px;
+  }
+  .panel h2::before{
+    content:"";
+    width:8px;height:8px;
+    background:var(--cyan);
+    border-radius:50%;
+    box-shadow:0 0 8px var(--cyan), 0 0 16px var(--cyan);
+    display:inline-block;
+  }
+
+  label{
+    display:block;
+    font-size:11px;
+    letter-spacing:1.5px;
+    color:var(--muted);
+    margin:14px 0 6px 0;
+    text-transform:uppercase;
+  }
+  label:first-of-type{margin-top:0;}
+
+  input[type="text"], select, textarea{
+    width:100%;
+    background:var(--panel2);
+    border:1px solid rgba(0,255,102,0.25);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px 12px;
+    font-family:'Consolas','Courier New',monospace;
+    font-size:14px;
+    outline:none;
+    transition:border-color .2s ease, box-shadow .2s ease;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus{
+    border-color:var(--neon);
+    box-shadow:0 0 12px rgba(0,255,102,0.35);
+  }
+  textarea{
+    resize:vertical;
+    min-height:160px;
+    line-height:1.5;
+  }
+  select{
+    cursor:pointer;
+    appearance:none;
+    -webkit-appearance:none;
+    background-image:linear-gradient(45deg, transparent 50%, var(--neon) 50%), linear-gradient(135deg, var(--neon) 50%, transparent 50%);
+    background-position:calc(100% - 18px) center, calc(100% - 13px) center;
+    background-size:5px 5px, 5px 5px;
+    background-repeat:no-repeat;
+  }
+
+  .dropzone{
+    margin-top:14px;
+    border:2px dashed rgba(0,229,255,0.35);
+    border-radius:14px;
+    padding:18px;
+    text-align:center;
+    font-size:12px;
+    color:var(--muted);
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .dropzone.dragover{
+    border-color:var(--cyan);
+    background:rgba(0,229,255,0.07);
+    box-shadow:0 0 20px rgba(0,229,255,0.25) inset;
+    color:var(--cyan);
+  }
+  .dropzone strong{color:var(--cyan);}
+
+  .btnrow{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:16px;
+  }
+  button{
+    font-family:inherit;
+    font-size:12px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    font-weight:700;
+    padding:11px 16px;
+    border-radius:10px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .2s ease, background .2s ease;
+    flex:1 1 auto;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-primary{
+    background:var(--neon);
+    color:#001a08;
+    box-shadow:0 0 14px rgba(0,255,102,0.5);
+  }
+  .btn-primary:hover{box-shadow:0 0 22px rgba(0,255,102,0.8);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--danger);
+    border-color:rgba(255,51,102,0.5);
+  }
+  .btn-ghost:hover{
+    box-shadow:0 0 14px rgba(255,51,102,0.5);
+    background:rgba(255,51,102,0.08);
+  }
+  .btn-cyan{
+    background:transparent;
+    color:var(--cyan);
+    border-color:rgba(0,229,255,0.5);
+  }
+  .btn-cyan:hover{
+    box-shadow:0 0 14px rgba(0,229,255,0.5);
+    background:rgba(0,229,255,0.08);
+  }
+  .btn-outline{
+    background:transparent;
+    color:var(--neon);
+    border-color:rgba(0,255,102,0.5);
+  }
+  .btn-outline:hover{
+    box-shadow:0 0 14px rgba(0,255,102,0.5);
+    background:rgba(0,255,102,0.08);
+  }
+
+  .stats{
+    display:flex;
+    gap:14px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .stat{
+    background:var(--panel2);
+    border:1px solid rgba(0,255,102,0.2);
+    border-radius:12px;
+    padding:10px 16px;
+    font-size:12px;
+    color:var(--muted);
+    flex:1;
+    min-width:120px;
+  }
+  .stat b{
+    display:block;
+    font-size:20px;
+    color:var(--neon);
+    text-shadow:0 0 8px rgba(0,255,102,0.6);
+    font-family:monospace;
+  }
+  .stat.warn b{color:var(--danger);text-shadow:0 0 8px rgba(255,51,102,0.6);}
+
+  .outputbox{
+    position:relative;
+  }
+  .outputbox .label-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .outputbox .label-row span{
+    font-size:11px;
+    letter-spacing:1.5px;
+    color:var(--muted);
+    text-transform:uppercase;
+  }
+  .code-scroll{
+    background:var(--panel2);
+    border:1px solid rgba(0,229,255,0.2);
+    border-radius:12px;
+    height:260px;
+    overflow-y:auto;
+    padding:10px 12px;
+    font-family:'Consolas','Courier New',monospace;
+    font-size:12.5px;
+    line-height:1.6;
+    color:var(--neon);
+    white-space:pre;
+  }
+  .code-scroll .line{
+    white-space:pre;
+    border-bottom:1px dashed rgba(255,255,255,0.03);
+    padding:1px 0;
+  }
+  .code-scroll .line:hover{
+    background:rgba(0,255,102,0.05);
+  }
+  .copybtn-small{
+    font-size:10px;
+    padding:6px 10px;
+  }
+  footer{
+    text-align:center;
+    padding:24px;
+    font-size:11px;
+    letter-spacing:2px;
+    color:var(--muted);
+  }
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--panel);
+    border:1px solid var(--neon);
+    color:var(--neon);
+    padding:12px 22px;
+    border-radius:12px;
+    font-size:13px;
+    letter-spacing:1px;
+    box-shadow:0 0 20px rgba(0,255,102,0.4);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    z-index:999;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
+  }
+  .invalid-note{
+    margin-top:8px;
+    font-size:11px;
+    color:var(--danger);
+    display:none;
+  }
+  </style>
+ </head>
+ <body>
+  <!-- AUTH SCREEN -->
+  <div id="authScreen" style="position:fixed;inset:0;background:#050505;display:flex;align-items:center;justify-content:center;z-index:9999;">
+   <div style="background:#111;padding:28px;border-radius:18px;border:1px solid #00FF66;width:min(92vw,360px);box-shadow:0 0 30px rgba(0,255,102,.25);text-align:center;">
+    <h2 style="margin:0 0 8px;color:#00FF66;letter-spacing:2px;">
+     KALIX AUTH
+    </h2>
+    <p style="color:#7a8a80;font-size:13px;margin:0 0 18px;">
+     Enter authentication key to continue
+    </p>
+    <input id="authKey" placeholder="Kalix Authentication Key" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,255,102,.35);background:#0b0b0b;color:#d8ffe6;font-family:Consolas,monospace;outline:none;" type="password"/>
+    <button id="authBtn" style="margin-top:14px;width:100%;padding:12px;border:none;border-radius:10px;background:#00FF66;color:#001a08;font-weight:800;letter-spacing:1px;cursor:pointer;box-shadow:0 0 16px rgba(0,255,102,.45);">
+     LOGIN
+    </button>
+    <div id="authMsg" style="margin-top:10px;color:#ff3366;font-size:12px;display:none;">
+     Invalid key
+    </div>
+   </div>
+  </div>
+  <header>
+   <h1>
+    KALIX HEXPATCH CONVERTER
+   </h1>
+   <div class="sub">
+    OFFSET :: HEXBYTE :: PATCH GENERATION MODULE
+   </div>
+  </header>
+  <div class="wrap">
+   <div class="grid">
+    <!-- LEFT: INPUTS -->
+    <div class="panel">
+     <h2>
+      Input Parameters
+     </h2>
+     <label for="libName">
+      Library Name
+     </label>
+     <input id="libName" spellcheck="false" type="text" value="libanogs.so"/>
+     <label for="archSel">
+      Architecture
+     </label>
+     <select id="archSel">
+      <option value="32">
+       32-bit
+      </option>
+      <option value="64">
+       64-bit
+      </option>
+     </select>
+     <label for="hexInput">
+      Hex Bytes
+     </label>
+     <input id="hexInput" spellcheck="false" type="text" value="00 00 80 D2 C0 03 5F D6"/>
+     <label for="offsetInput">
+      Offsets (one per line)
+     </label>
+     <textarea id="offsetInput" placeholder="0x123456
+0x789ABC
+0xDEF012" spellcheck="false"></textarea>
+     <div class="invalid-note" id="invalidNote">
+     </div>
+     <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0.5px;cursor:pointer;">
+      <input checked="" id="sortAscEl" style="width:auto;accent-color:var(--neon);cursor:pointer;" type="checkbox"/>
+      Sort offsets low to high
+     </label>
+     <div class="dropzone" id="dropzone">
+      Drag &amp; drop a
+      <strong>
+       .txt
+      </strong>
+      file here containing offsets
+      <br/>
+      (one per line), or click to browse
+     </div>
+     <input accept=".txt" id="fileInput" style="display:none;" type="file"/>
+     <div class="btnrow">
+      <button class="btn-primary" id="convertBtn">
+       Convert
+      </button>
+      <button class="btn-ghost" id="clearBtn">
+       Clear
+      </button>
+     </div>
+    </div>
+    <!-- RIGHT: OUTPUTS -->
+    <div class="panel">
+     <h2>
+      Generated Output
+     </h2>
+     <div class="stats">
+      <div class="stat">
+       <b id="statTotal">
+        0
+       </b>
+       Total Offsets
+      </div>
+      <div class="stat">
+       <b id="statDupes">
+        0
+       </b>
+       Duplicates Removed
+      </div>
+      <div class="stat warn">
+       <b id="statInvalid">
+        0
+       </b>
+       Invalid Skipped
+      </div>
+     </div>
+     <div class="outputbox">
+      <div class="label-row">
+       <span>
+        Format 1 — MemoryPatch::createWithHex
+       </span>
+       <button class="btn-cyan copybtn-small" id="copyFmt1">
+        Copy
+       </button>
+      </div>
+      <div class="code-scroll" id="output1">
+      </div>
+     </div>
+     <div class="outputbox" style="margin-top:16px;">
+      <div class="label-row">
+       <span>
+        Format 2 — HexPatches.MemoryPatch
+       </span>
+       <button class="btn-cyan copybtn-small" id="copyFmt2">
+        Copy
+       </button>
+      </div>
+      <div class="code-scroll" id="output2">
+      </div>
+     </div>
+     <div class="btnrow">
+      <button class="btn-outline" id="copyAllBtn">
+       Copy All
+      </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <footer>
+   KALIX SYSTEMS // OFFLINE LOCAL CONVERSION // NO DATA LEAVES YOUR BROWSER
+  </footer>
+  <div class="toast" id="toast">
+  </div>
+  <script>
+   (function(){
+  "use strict";
+
+  // ===== BASIC LOCAL AUTHENTICATION =====
+  const VALID_KEY = "KALIX-2029-ACCESS"; // change this key
+
+  const authScreen = document.getElementById('authScreen');
+  const authInput = document.getElementById('authKey');
+  const authBtn = document.getElementById('authBtn');
+  const authMsg = document.getElementById('authMsg');
+
+  function unlock(){
+    const key = authInput.value.trim();
+
+    if(key === VALID_KEY){
+      localStorage.setItem('kalix_auth', '1');
+      authScreen.style.display = 'none';
+    }else{
+      authMsg.style.display = 'block';
+      authInput.focus();
+    }
+  }
+
+  // keep unlocked for this browser/device
+  if(localStorage.getItem('kalix_auth') === '1'){
+    authScreen.style.display = 'none';
+  }
+
+  authBtn.addEventListener('click', unlock);
+
+  authInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') unlock();
+  });
+
+
+
+  const libNameEl = document.getElementById('libName');
+  const archSelEl = document.getElementById('archSel');
+  const hexInputEl = document.getElementById('hexInput');
+  const offsetInputEl = document.getElementById('offsetInput');
+  const invalidNoteEl = document.getElementById('invalidNote');
+  const sortAscEl = document.getElementById('sortAscEl');
+
+  const output1El = document.getElementById('output1');
+  const output2El = document.getElementById('output2');
+
+  const statTotal = document.getElementById('statTotal');
+  const statDupes = document.getElementById('statDupes');
+  const statInvalid = document.getElementById('statInvalid');
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  const toastEl = document.getElementById('toast');
+
+  const OFFSET_RE = /^0x[0-9A-Fa-f]+$/;
+
+  let currentFmt1Lines = [];
+  let currentFmt2Lines = [];
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>{
+      toastEl.classList.remove('show');
+    }, 1600);
+  }
+
+  function normalizeOffset(raw){
+    let s = raw.trim();
+    if(!s) return null;
+    // remove trailing commas/semicolons stray chars
+    s = s.replace(/[,;]+$/,'');
+    // allow input without 0x prefix but with hex chars only -> prefix it
+    if(/^[0-9A-Fa-f]+$/.test(s) && !/^0x/i.test(s)){
+      s = '0x' + s;
+    }
+    // normalize 0X to 0x
+    if(/^0X/.test(s)){
+      s = '0x' + s.slice(2);
+    }
+    if(!OFFSET_RE.test(s)) return {invalid:true, raw:raw};
+    // strip leading zeros after 0x (but keep at least one digit), uppercase hex digits
+    let hexPart = s.slice(2).toUpperCase();
+    hexPart = hexPart.replace(/^0+(?=[0-9A-F])/,'');
+    if(hexPart === '') hexPart = '0';
+    return {invalid:false, value:'0x' + hexPart};
+  }
+
+  function parseOffsets(text){
+    const rawLines = text.split(/\r?\n/);
+    const seen = new Set();
+    const validOffsets = [];
+    let dupeCount = 0;
+    let invalidCount = 0;
+
+    for(let i=0;i<rawLines.length;i++){
+      const line = rawLines[i].trim();
+      if(line === '') continue;
+      // support multiple offsets separated by comma/space on same line
+      const tokens = line.split(/[,\s]+/).filter(Boolean);
+      for(let j=0;j<tokens.length;j++){
+        const result = normalizeOffset(tokens[j]);
+        if(!result || result.invalid){
+          invalidCount++;
+          continue;
+        }
+        if(seen.has(result.value)){
+          dupeCount++;
+          continue;
+        }
+        seen.add(result.value);
+        validOffsets.push(result.value);
+      }
+    }
+
+    return {validOffsets, dupeCount, invalidCount};
+  }
+
+  function buildOutputs(){
+    const libName = (libNameEl.value.trim() || 'libanogs.so');
+    const arch = archSelEl.value;
+    const hexBytes = hexInputEl.value; // keep original spacing, don't trim internal
+    const hexBytesTrimmed = hexBytes.trim();
+    const rawText = offsetInputEl.value;
+
+    const {validOffsets, dupeCount, invalidCount} = parseOffsets(rawText);
+
+    if(sortAscEl.checked){
+      validOffsets.sort(function(a, b){
+        const av = BigInt(a);
+        const bv = BigInt(b);
+        if(av < bv) return -1;
+        if(av > bv) return 1;
+        return 0;
+      });
+    }
+
+    statTotal.textContent = validOffsets.length;
+    statDupes.textContent = dupeCount;
+    statInvalid.textContent = invalidCount;
+
+    if(invalidCount > 0){
+      invalidNoteEl.style.display = 'block';
+      invalidNoteEl.textContent = invalidCount + ' invalid offset(s) skipped. Expected format: 0x1A2B3C';
+    } else {
+      invalidNoteEl.style.display = 'none';
+    }
+
+    const fmt1Lines = new Array(validOffsets.length);
+    const fmt2Lines = new Array(validOffsets.length);
+
+    for(let i=0;i<validOffsets.length;i++){
+      const off = validOffsets[i];
+      fmt1Lines[i] = 'MemoryPatch::createWithHex("' + libName + '", ' + off + ', "' + hexBytesTrimmed + '").Modify();';
+      fmt2Lines[i] = 'HexPatches.MemoryPatch("' + libName + '", ' + off + ', "h' + hexBytesTrimmed + '", ' + arch + ');';
+    }
+
+    currentFmt1Lines = fmt1Lines;
+    currentFmt2Lines = fmt2Lines;
+
+    renderOutput(output1El, fmt1Lines);
+    renderOutput(output2El, fmt2Lines);
+  }
+
+  // Efficient DOM rendering using DocumentFragment, chunked for very large lists
+  function renderOutput(container, lines){
+    container.textContent = '';
+    if(lines.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'line';
+      empty.style.color = '#3a4a40';
+      empty.textContent = '// no valid offsets yet';
+      container.appendChild(empty);
+      return;
+    }
+
+    const CHUNK = 200;
+    let idx = 0;
+
+    function renderChunk(){
+      const frag = document.createDocumentFragment();
+      const end = Math.min(idx + CHUNK, lines.length);
+      for(; idx < end; idx++){
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.textContent = lines[idx];
+        frag.appendChild(div);
+      }
+      container.appendChild(frag);
+      if(idx < lines.length){
+        // yield to main thread to keep it smooth for huge lists
+        setTimeout(renderChunk, 0);
+      }
+    }
+    renderChunk();
+  }
+
+  function copyText(text, label){
+    if(!text){
+      showToast('Nothing to copy');
+      return;
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=>{
+        showToast(label + ' copied');
+      }).catch(()=>{
+        fallbackCopy(text, label);
+      });
+    } else {
+      fallbackCopy(text, label);
+    }
+  }
+
+  function fallbackCopy(text, label){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try{
+      document.execCommand('copy');
+      showToast(label + ' copied');
+    } catch(e){
+      showToast('Copy failed');
+    }
+    document.body.removeChild(ta);
+  }
+
+  // Debounced real-time conversion
+  let debounceTimer = null;
+  function scheduleConvert(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(buildOutputs, 180);
+  }
+
+  // Event bindings
+  document.getElementById('convertBtn').addEventListener('click', buildOutputs);
+
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    offsetInputEl.value = '';
+    libNameEl.value = 'libanogs.so';
+    hexInputEl.value = '00 00 80 D2 C0 03 5F D6';
+    archSelEl.value = '32';
+    invalidNoteEl.style.display = 'none';
+    buildOutputs();
+    showToast('Cleared');
+  });
+
+  document.getElementById('copyFmt1').addEventListener('click', function(){
+    copyText(currentFmt1Lines.join('\n'), 'Format 1');
+  });
+  document.getElementById('copyFmt2').addEventListener('click', function(){
+    copyText(currentFmt2Lines.join('\n'), 'Format 2');
+  });
+  document.getElementById('copyAllBtn').addEventListener('click', function(){
+    const combined = currentFmt1Lines.join('\n') + '\n\n' + currentFmt2Lines.join('\n');
+    copyText(combined, 'All output');
+  });
+
+  [libNameEl, hexInputEl, archSelEl].forEach(el=>{
+    el.addEventListener('input', scheduleConvert);
+    el.addEventListener('change', scheduleConvert);
+  });
+  sortAscEl.addEventListener('change', buildOutputs);
+  offsetInputEl.addEventListener('input', scheduleConvert);
+
+  // Drag and drop
+  dropzone.addEventListener('click', ()=> fileInput.click());
+
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+  });
+  dropzone.addEventListener('drop', function(e){
+    const files = e.dataTransfer.files;
+    if(files && files.length > 0){
+      handleFile(files[0]);
+    }
+  });
+  fileInput.addEventListener('change', function(e){
+    if(e.target.files && e.target.files.length > 0){
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  function handleFile(file){
+    if(!file.name.toLowerCase().endsWith('.txt')){
+      showToast('Only .txt files supported');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const content = e.target.result;
+      if(offsetInputEl.value.trim() !== ''){
+        offsetInputEl.value = offsetInputEl.value.replace(/\s+$/,'') + '\n' + content;
+      } else {
+        offsetInputEl.value = content;
+      }
+      buildOutputs();
+      showToast('File loaded: ' + file.name);
+    };
+    reader.onerror = function(){
+      showToast('Failed to read file');
+    };
+    reader.readAsText(file);
+  }
+
+  // Initial render
+  buildOutputs();
+})();
+  </script>
+ </body>
+</html>
